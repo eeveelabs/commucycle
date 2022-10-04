@@ -25,8 +25,16 @@ def basehit():
 
 @app.route("/request/<disp_id>/<cycle_id>", methods=["GET", "POST"])
 async def requestCycle(disp_id, cycle_id):
+    '''
+    Endpoint to request a cycle, return is the cycle was issued, or not
+    Contains a async call to request_cycle(), that does mqtt, and return a list of messages in the cyclereqeuest/<disp_id>/response topic
+    '''
     isCycleAtDisp = db.first_or_404(db.select(cycles).filter_by(disp_id=disp_id))
-    request_cycle(cycle_id, disp_id)
+    responses = request_cycle(cycle_id, disp_id)
+    for response in responses:
+        if(cycle_id in response):
+            return "Cycle issued :{}".format(cycle_id)
+    return "Cycle issue failed"
 
 
 
