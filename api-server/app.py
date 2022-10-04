@@ -1,31 +1,31 @@
-from crypt import methods
+
 from flask import Flask, request, Request, Response
-from flask_mqtt import Mqtt
+from flask_sqlalchemy import SQLAlchemy
+
 
 app = Flask(__name__)
+# DB config
+app.config["SQLALCHEMY_DB_URI"] = "sqlite3:///db.sqlite3"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-app.config['MQTT_BROKER_URL'] = '0.0.0.0'  
-app.config['MQTT_BROKER_PORT'] = 1883 
-app.config['MQTT_USERNAME'] = ''  
-app.config['MQTT_PASSWORD'] = ''  
-app.config['MQTT_KEEPALIVE'] = 5  
-app.config['MQTT_TLS_ENABLED'] = False  
+db = SQLAlchemy(app)
 
-mqtt = Mqtt(app)
+class cycles(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    isIssued = db.Column(db.Integer)
+    isTxInProgress = db.Column(db.Integer)
+    disp_id = db.Column(db.Integer)
 
-@mqtt.on_connect()
-def handle_connect():
-    mqtt.publish("logs", "Connection established")
-    mqtt.subscribe("/cycles/cycleResponse")
 
 @app.route("/", methods=["GET"])
 def basehit():
     return "Server online"
 
-@app.route("/dispensers/<disp_id>/<cycle_id>", methods=["GET", "POST"])
-def requestCycle(disp_id, cycle_id):
-    mqtt.publish("/cycles/cycleRequest", "D{}-C{}".format(disp_id, cycle_id))
-    return "Request sent"
+@app.route("/request/<disp_id>/<cycle_id>", methods=["GET", "POST"])
+async def requestCycle(disp_id, cycle_id):
+    isCycleAtDisp = db.first_or_404(db.select(cycles).filter_by(disp_id=disp_id))
+
+    
 
 if __name__ == "__main__":
     app.run()
